@@ -44,21 +44,45 @@
     [PyReturn (value) (CReturn (desugar-inner value))]
     [PyIf (test t e)
           (CLet 'test-value (desugar-inner test)
-                (CIf (CApp (CApp (CPrimF 'class-lookup)
-                                 (list (CId 'test-value)
-                                       (CStr "__bool__"))
-                                 (CTuple empty))
-                           empty
-                           (CTuple empty))
+                (CIf (get-and-call (PyId 'test-value)
+                                   "__bool__"
+                                   empty
+                                   (PyTuple empty))
                      (desugar-inner t)
                      (desugar-inner e)))]
     [PyOp (id args)
-          (CApp (CPrimF id)
-                (map desugar-inner args)
-                (CTuple empty))]
+          (case id
+            [(Add) (binop "__add__" (first args) (second args))]
+            [(Sub) (binop "__sub__" (first args) (second args))]
+            [(USub) (unop "__neg__" (first args))]
+            [else (CApp (CPrimF id)
+                        (map desugar-inner args)
+                        (CTuple empty))])]
+    [PyPass () (CNone)]
     ;;[else (error 'desugar (string-append "not implemented: "
     ;;                                     (to-string exp)))]
     ))
+
+(define (get-and-call inner name args vararg)
+  (CApp (CApp (CPrimF 'class-lookup)
+              (list (desugar-inner inner)
+                    (CStr name))
+              (CTuple empty))
+        (map desugar-inner args)
+        (desugar-inner vararg)))
+
+(define (binop name left right)
+  (get-and-call left name
+                (list right)
+                (PyTuple empty)))
+
+(define (unop name left)
+  (CApp (CApp (CPrimF 'class-lookup)
+              (list (desugar-inner left)
+                    (CStr name))
+              (CTuple empty))
+        empty
+        (CTuple empty)))
 
 (define (desugar-body exp)
   (foldl (lambda (id e)

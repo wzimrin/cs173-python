@@ -31,15 +31,20 @@ that calls the primitive `print`.
 (define partial-apply
   (CAddGlobal
    'partial-apply
-   (CFunc empty
+   (CFunc (list 'func)
           (some 'args)
           (CReturn
            (CFunc empty
                   (some 'more-args)
                   (CReturn
-                   (CApp (CPrimF 'tuple-append)
-                         (list (CId 'args) (CId 'more-args))
-                         (CTuple empty))))))))
+                   (CApp (CApp (CPrimF 'class-lookup)
+                               (list (CId 'func)
+                                     (CStr "__call__"))
+                               (CTuple empty))
+                         empty
+                         (CApp (CPrimF 'tuple-append)
+                               (list (CId 'args) (CId 'more-args))
+                               (CTuple empty)))))))))
 
 (define class-type
   (CAddGlobal
@@ -55,13 +60,16 @@ that calls the primitive `print`.
   (define id
     (CAddGlobal
      'id
-     (CObj (CId 'type)
-           (CPrimMap (map (lambda (pair)
-                            (local [(define-values (name val) pair)]
-                                   (values (CStr name) val))) fs))))))
+     (CObj (CBox (CPrimMap (map (lambda (pair)
+                                  (local [(define-values (name val) pair)]
+                                         (values (CStr name) val))) fs)))
+           (CBox (CId 'type))))))
 
 (make-type none-type
-           (list))
+           (list (values "__bool__"
+                         (CFunc (list 'this)
+                                (none)
+                                (CReturn (CFalse))))))
 
 (make-type bool-type
            (list (values "__bool__"
@@ -73,19 +81,29 @@ that calls the primitive `print`.
            (list (values "__bool__"
                          (CFunc (list 'this)
                                 (none)
-                                (CReturn
-                                 (CIf (CApp (CPrimF 'equal)
-                                            (list (CId 'this)
-                                                  (CNum 0))
-                                            (CTuple empty))
-                                      (CReturn (CFalse))
-                                      (CReturn (CTrue))))))))
+                                (CIf (CApp (CPrimF 'equal)
+                                           (list (CId 'this)
+                                                 (CNum 0))
+                                           (CTuple empty))
+                                     (CReturn (CFalse))
+                                     (CReturn (CTrue)))))
+                 (values "__add__"
+                         (CPrimF 'int-add))
+                 (values "__sub__"
+                         (CPrimF 'int-sub))
+                 (values "__neg__"
+                         (CPrimF 'int-neg))))
 
 (make-type str-type
            (list))
 
 (make-type func-type
-           (list))
+           (list (values "__call__"
+                         (CFunc (list 'this)
+                                (some 'args)
+                                (CReturn (CApp (CId 'this)
+                                               empty
+                                               (CId 'args)))))))
 
 (make-type obj-type
            (list (values "__bool__"
@@ -96,16 +114,24 @@ that calls the primitive `print`.
                                             (list (CId 'this)
                                                   (CStr "__len__"))
                                             (CTuple empty))
-                                      (CApp (CApp (CPrimF 'class-lookup)
-                                                  (list (CId 'this)
-                                                        (CStr "__len__"))
-                                                  (CTuple empty))
-                                            empty
-                                            (CTuple empty))
+                                      (CIf (CApp (CPrimF 'equal)
+                                                 (list (CApp (CApp (CPrimF 'class-lookup)
+                                                                   (list (CId 'this)
+                                                                         (CStr "__len__"))
+                                                                   (CTuple empty))
+                                                             empty
+                                                             (CTuple empty))
+                                                       (CNum 0))
+                                                 (CTuple empty))
+                                           (CFalse)
+                                           (CTrue))
                                       (CTrue)))))))
 
 (make-type tuple-type
-           (list))
+           (list (values "__len__"
+                         (CPrimF 'tuple-length))
+                 (values "__add__"
+                         (CPrimF 'tuple-append))))
 
 (define lib-binds
   (list

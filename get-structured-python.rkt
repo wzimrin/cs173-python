@@ -71,9 +71,9 @@ structure that you define in python-syntax.rkt
     [(hash-table ('nodetype "Lambda")
                  ('args args)
                  ('body body))
-     (local [(define-values (va args) (get-structured-python args))]
-            (PyFunc va args
-                    (PyReturn (PySeq (map get-structured-python body)))))]
+     (local [(define-values (va n-args) (get-structured-python args))]
+            (PyFunc va n-args
+                    (PyReturn (get-structured-python body))))]
     [(hash-table ('nodetype "arg")
                  ('arg id)
                  ('annotation an))
@@ -102,11 +102,18 @@ structure that you define in python-syntax.rkt
      (PyOp (string->symbol op)
            (list (get-structured-python left)
                  (get-structured-python right)))]
+    [(hash-table ('nodetype "UnaryOp")
+                 ('op (hash-table ('nodetype op)))
+                 ('operand operand))
+     (PyOp (string->symbol op)
+           (list (get-structured-python operand)))]
     [(hash-table ('nodetype "Tuple")
                  ('ctx ctx)
                  ('elts elts))
      (PyTuple
       (map get-structured-python elts))]
+    [(hash-table ('nodetype "Pass"))
+     (PyPass)]
     [_ (error 'parse (string-append "Haven't handled a case yet:\n"
                                     (format "~s" pyjson)))]))
 
