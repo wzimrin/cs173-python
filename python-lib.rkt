@@ -95,12 +95,7 @@ that calls the primitive `print`.
            (list))
 
 (make-type func-type
-           (list (values "__call__"
-                         (CFunc (list 'this)
-                                (some 'args)
-                                (CReturn (CApp (CId 'this)
-                                               empty
-                                               (CId 'args)))))))
+           (list))
 
 (make-type obj-type
            (list (values "__bool__"
