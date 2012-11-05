@@ -37,10 +37,7 @@ that calls the primitive `print`.
            (CFunc empty
                   (some 'more-args)
                   (CReturn
-                   (CApp (CApp (CPrimF 'class-lookup)
-                               (list (CId 'func)
-                                     (CStr "__call__"))
-                               (CTuple empty))
+                   (CApp (CId 'func)
                          empty
                          (CApp (CPrimF 'tuple-append)
                                (list (CId 'args) (CId 'more-args))
